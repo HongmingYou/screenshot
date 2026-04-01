@@ -8,6 +8,8 @@ struct ActivityRecord: Codable, Identifiable {
     var windowTitle: String
     var ocrText: String
     var duration: Double    // seconds spent in this context
+    var screenshotPath: String?   // path to H.265 hourly video segment
+    var videoTimestamp: Double?   // seconds offset within that video file
 
     init(
         id: UUID = .init(),
@@ -15,7 +17,9 @@ struct ActivityRecord: Codable, Identifiable {
         appBundleID: String,
         windowTitle: String,
         ocrText: String,
-        duration: Double = 0
+        duration: Double = 0,
+        screenshotPath: String? = nil,
+        videoTimestamp: Double? = nil
     ) {
         self.id = id.uuidString
         self.timestamp = timestamp
@@ -23,7 +27,14 @@ struct ActivityRecord: Codable, Identifiable {
         self.windowTitle = windowTitle
         self.ocrText = ocrText
         self.duration = duration
+        self.screenshotPath = screenshotPath
+        self.videoTimestamp = videoTimestamp
     }
+}
+
+extension ActivityRecord: Hashable {
+    static func == (lhs: ActivityRecord, rhs: ActivityRecord) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
 extension ActivityRecord: FetchableRecord, PersistableRecord {

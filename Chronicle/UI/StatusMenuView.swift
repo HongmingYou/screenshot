@@ -20,7 +20,7 @@ struct StatusMenuView: View {
         .frame(width: 320)
         .task { await reload() }
         // Refresh stats whenever capture count ticks up
-        .onChange(of: captureManager.captureCount) { _ in
+        .onChange(of: captureManager.captureCount) {
             Task { await reload() }
         }
     }
@@ -44,11 +44,20 @@ struct StatusMenuView: View {
     private var statusIndicator: some View {
         HStack(spacing: 5) {
             Circle()
-                .fill(captureManager.isRunning ? Color.green : Color.orange)
+                .fill(captureManager.permissionDenied ? Color.red : captureManager.isRunning ? Color.green : Color.orange)
                 .frame(width: 7, height: 7)
-            Text(captureManager.isRunning ? "Recording" : "Paused")
+            if captureManager.permissionDenied {
+                Button("前往授权") {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
+                }
+                .buttonStyle(.plain)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.red)
+            } else {
+                Text(captureManager.isRunning ? "Recording" : "Paused")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -91,7 +100,7 @@ struct StatusMenuView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 if records.isEmpty {
-                    Text(searchQuery.isEmpty ? "No captures yet — recording will start shortly." : "No results for "\(searchQuery)"")
+                    Text(searchQuery.isEmpty ? "No captures yet — recording will start shortly." : "No results for \"\(searchQuery)\"")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -110,30 +119,79 @@ struct StatusMenuView: View {
     // MARK: - Footer
 
     private var footerSection: some View {
-        HStack {
-            Button(captureManager.isRunning ? "Pause" : "Resume") {
-                Task {
-                    if captureManager.isRunning { await captureManager.stop() }
-                    else { await captureManager.start() }
+        VStack(spacing: 0) {
+            HStack {
+                Button("打开 Chronicle") {
+                    WindowManager.shared.openMainWindow()
                 }
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.accent)
+                .buttonStyle(.plain)
+                .foregroundStyle(.tint)
 
-            Spacer()
+                Spacer()
 
-            if let err = captureManager.lastError {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                    .help(err)
-            }
-
-            Button("Quit") { NSApplication.shared.terminate(nil) }
+                Button("设置") {
+                    WindowManager.shared.openSettings()
+                }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+
+            Divider()
+
+            HStack {
+                if captureManager.permissionDenied {
+                    // After granting in System Settings, a relaunch is required for the
+                    // TCC change to propagate to the running process.
+                    Button("授权后重启应用") {
+                        relaunchApp()
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.red)
+                } else {
+                    Button(captureManager.isRunning ? "暂停录制" : "恢复录制") {
+                        Task {
+                            if captureManager.isRunning { await captureManager.stop() }
+                            else { await captureManager.start() }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(captureManager.isRunning ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
+                }
+
+                Spacer()
+
+                if let err = captureManager.lastError {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                        .help(err)
+                }
+
+                Button("退出") { NSApplication.shared.terminate(nil) }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+    }
+
+    // MARK: - Helpers
+
+    private func relaunchApp() {
+        guard let bundlePath = Bundle.main.resourceURL?
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent() else {
+            NSApplication.shared.terminate(nil)
+            return
+        }
+        let task = Process()
+        task.launchPath = "/bin/sh"
+        task.arguments = ["-c", "sleep 0.5 && open '\(bundlePath.path)'"]
+        try? task.run()
+        NSApplication.shared.terminate(nil)
     }
 
     // MARK: - Data loading

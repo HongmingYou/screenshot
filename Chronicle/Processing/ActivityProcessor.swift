@@ -7,7 +7,13 @@ actor ActivityProcessor {
     private var lastTimestamp: Date = .distantPast
     private let maxDuration: TimeInterval = 300  // cap gaps at 5 min to avoid huge durations
 
-    func process(ocrText: String, appBundleID: String, windowTitle: String) async {
+    func process(
+        ocrText: String,
+        appBundleID: String,
+        windowTitle: String,
+        screenshotPath: String? = nil,
+        videoTimestamp: Double? = nil
+    ) async {
         let now = Date()
         let duration = min(now.timeIntervalSince(lastTimestamp), maxDuration)
         lastTimestamp = now
@@ -17,7 +23,9 @@ actor ActivityProcessor {
             appBundleID: appBundleID,
             windowTitle: windowTitle,
             ocrText: ocrText,
-            duration: duration
+            duration: duration,
+            screenshotPath: screenshotPath,
+            videoTimestamp: videoTimestamp
         )
 
         do {

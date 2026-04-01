@@ -80,6 +80,13 @@ final class AppDatabase {
             }
         }
 
+        migrator.registerMigration("v2_screenshot_ref") { db in
+            try db.alter(table: "activity_records") { t in
+                t.add(column: "screenshotPath",  .text)
+                t.add(column: "videoTimestamp",  .double)
+            }
+        }
+
         try migrator.migrate(dbPool)
     }
 
@@ -138,6 +145,15 @@ final class AppDatabase {
                 ORDER  BY ar.timestamp DESC
                 LIMIT  ?
                 """, arguments: ["\(q)*", limit])
+        }
+    }
+
+    func summary(for date: Date) async throws -> DailySummary? {
+        let start = Calendar.current.startOfDay(for: date)
+        return try await dbPool.read { db in
+            try DailySummary
+                .filter(Column("date") == start)
+                .fetchOne(db)
         }
     }
 
