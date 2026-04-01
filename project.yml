@@ -1,0 +1,48 @@
+name: Chronicle
+options:
+  bundleIdPrefix: com.hmyou
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "15.4"
+  createIntermediateGroups: true
+  defaultConfig: Debug
+
+packages:
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: "6.0.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+targets:
+  Chronicle:
+    type: application
+    platform: macOS
+    sources:
+      - path: Chronicle
+    settings:
+      base:
+        PRODUCT_NAME: Chronicle
+        PRODUCT_BUNDLE_IDENTIFIER: com.hmyou.chronicle
+        INFOPLIST_FILE: Chronicle/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Chronicle/Chronicle.entitlements
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - package: GRDB
+        product: GRDB
+
+schemes:
+  Chronicle:
+    build:
+      targets:
+        Chronicle: all
+    run:
+      config: Debug
+    archive:
+      config: Release
